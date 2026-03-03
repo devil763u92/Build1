@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Flash Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            background: black;
+            color: white;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            margin: 10px;
+            background: red;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        #status {
+            margin: 20px;
+            color: yellow;
+        }
+        video {
+            width: 100%;
+            max-width: 400px;
+            border: 2px solid red;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>⚡ FLASH CONTROL PANEL</h1>
+    <p>Bos Vimon, ini percobaan torch API</p>
+    
+    <button onclick="startCamera()">AKSES KAMERA</button>
+    <button onclick="toggleFlash()">NYALAIN/ MATIIN FLASH</button>
+    
+    <div id="status">Status: 🔴 Flash mati</div>
+    <video id="camera" autoplay playsinline></video>
+
+    <script>
+        let cameraStream = null;
+        let flashOn = false;
+        let track = null;
+
+        async function startCamera() {
+            try {
+                // Minta akses kamera belakang dengan resolusi rendah
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment', // Kamera belakang
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                });
+                
+                // Tampilin preview video (opsional)
+                const video = document.getElementById('camera');
+                video.srcObject = cameraStream;
+                video.style.display = 'block';
+                
+                // Ambil track video
+                track = cameraStream.getVideoTracks()[0];
+                
+                // Cek apakah support torch
+                if (track.getCapabilities) {
+                    const capabilities = track.getCapabilities();
+                    if (capabilities.torch) {
+                        document.getElementById('status').innerHTML = 'Status: ✅ Siap, flash bisa dikontrol';
+                    } else {
+                        document.getElementById('status').innerHTML = 'Status: ❌ HP lo gak support torch API';
+                    }
+                } else {
+                    document.getElementById('status').innerHTML = 'Status: ❌ Browser gak support torch detection';
+                }
+                
+            } catch (err) {
+                alert('Gagal akses kamera: ' + err.message);
+            }
+        }
+
+        async function toggleFlash() {
+            if (!track) {
+                alert('Pencet tombol AKSES KAMERA dulu Bos!');
+                return;
+            }
+            
+            try {
+                flashOn = !flashOn;
+                // Coba setting torch
+                await track.applyConstraints({
+                    advanced: [{ torch: flashOn }]
+                });
+                
+                document.getElementById('status').innerHTML = 
+                    flashOn ? 'Status: 💡 Flash nyala' : 'Status: 🔴 Flash mati';
+            } catch (err) {
+                alert('Gagal kontrol flash: ' + err.message);
+                flashOn = false;
+            }
+        }
+    </script>
+    
+    <p style="font-size: 12px; margin-top: 50px; color: gray;">
+        ⚠️ Cuma work di browser Android tertentu (Chrome/Firefox terbaru)<br>
+        dan HP yang support torch API.
+    </p>
+</body>
+</html>
